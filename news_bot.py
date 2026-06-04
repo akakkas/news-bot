@@ -25,30 +25,36 @@ SLEEP_BETWEEN_MSGS = 1.2 # seconds (Telegram + translate rate-limit safety)
 # Feeds: (emoji, category, source_name, url, source_lang)
 # Verify each URL once after deploy; replace any that 404.
 FEEDS = [
-    # 🇹🇷 Türkiye
-    ("🇹🇷", "Türkiye", "BBC Türkçe",   "https://feeds.bbci.co.uk/turkce/rss.xml",        "tr"),
-    ("🇹🇷", "Türkiye", "DW Türkçe",    "https://rss.dw.com/xml/rss-tur-all",             "tr"),
-    ("🇹🇷", "Türkiye", "Sözcü",        "https://www.sozcu.com.tr/feed/",                 "tr"),
-    ("🇹🇷", "Türkiye", "NTV",          "https://www.ntv.com.tr/son-dakika.rss",          "tr"),
-    ("🇹🇷", "Türkiye", "Hürriyet",     "https://www.hurriyet.com.tr/rss/gundem",         "tr"),
+    # 🇹🇷 Türkiye - genel/siyaset (piyasayı dolaylı etkiler)
+    ("🇹🇷", "Türkiye", "BBC Türkçe",    "https://feeds.bbci.co.uk/turkce/rss.xml",       "tr"),
+    ("🇹🇷", "Türkiye", "DW Türkçe",     "https://rss.dw.com/xml/rss-tur-all",            "tr"),
+    ("🇹🇷", "Türkiye", "Sözcü",         "https://www.sozcu.com.tr/feed/",                "tr"),
+    ("🇹🇷", "Türkiye", "Hürriyet",      "https://www.hurriyet.com.tr/rss/gundem",        "tr"),
 
-    # 🌍 Dünya
-    ("🌍", "Dünya",   "BBC World",    "http://feeds.bbci.co.uk/news/world/rss.xml",     "en"),
-    ("🌍", "Dünya",   "Al Jazeera",   "https://www.aljazeera.com/xml/rss/all.xml",      "en"),
-    ("🌍", "Dünya",   "Reuters",      "https://feeds.reuters.com/reuters/topNews",      "en"),
-    ("🌍", "Dünya",   "AP",           "https://feeds.apnews.com/apf-topnews",           "en"),
+    # 💰 BIST / Türkiye Ekonomi
+    ("💰", "BIST",      "Bloomberg HT",  "https://www.bloomberght.com/rss",                "tr"),
+    ("💰", "BIST",      "Dünya Gzt.",    "https://www.dunya.com/rss?dunya",                "tr"),
+    ("💰", "BIST",      "Hürriyet Eko",  "https://www.hurriyet.com.tr/rss/ekonomi",        "tr"),
+    ("💰", "BIST",      "Sözcü Eko",     "https://www.sozcu.com.tr/category/ekonomi/feed/","tr"),
 
-    # 💰 Ekonomi
-    ("💰", "Ekonomi", "Bloomberg HT", "https://www.bloomberght.com/rss",                "tr"),
-    ("💰", "Ekonomi", "Dünya Gzt.",   "https://www.dunya.com/rss?dunya",                "tr"),
+    # 📈 ABD / Global Piyasalar
+    ("📈", "Piyasalar", "CNBC",          "https://www.cnbc.com/id/100003114/device/rss/rss.html",      "en"),
+    ("📈", "Piyasalar", "CNBC Markets",  "https://www.cnbc.com/id/15839069/device/rss/rss.html",       "en"),
+    ("📈", "Piyasalar", "Yahoo Finance", "https://finance.yahoo.com/news/rssindex",                    "en"),
+    ("📈", "Piyasalar", "MarketWatch",   "https://feeds.content.dowjones.io/public/rss/mw_topstories", "en"),
+    ("📈", "Piyasalar", "WSJ Markets",   "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",              "en"),
 
-    # 💻 Teknoloji
-    ("💻", "Teknoloji","Webrazzi",    "https://webrazzi.com/feed/",                     "tr"),
-    ("💻", "Teknoloji","TechCrunch",  "https://techcrunch.com/feed/",                   "en"),
-    ("💻", "Teknoloji","The Verge",   "https://www.theverge.com/rss/index.xml",         "en"),
+    # 🏦 Makro / Merkez Bankaları (faiz, enflasyon)
+    ("🏦", "Makro",     "Fed",           "https://www.federalreserve.gov/feeds/press_all.xml",  "en"),
 
-    # ⚽ Spor
-    ("⚽", "Spor",    "BBC Sport",    "http://feeds.bbci.co.uk/sport/rss.xml",          "en"),
+    # 🌍 Dünya (jeopolitik - petrol, dolar, emtia tetikleyici)
+    ("🌍", "Dünya",     "BBC World",     "http://feeds.bbci.co.uk/news/world/rss.xml",    "en"),
+    ("🌍", "Dünya",     "Al Jazeera",    "https://www.aljazeera.com/xml/rss/all.xml",     "en"),
+
+    # 💻 Teknoloji (NASDAQ/teknoloji hisseleri)
+    ("💻", "Teknoloji", "Webrazzi",      "https://webrazzi.com/feed/",                    "tr"),
+    ("💻", "Teknoloji", "TechCrunch",    "https://techcrunch.com/feed/",                  "en"),
+    ("💻", "Teknoloji", "The Verge",     "https://www.theverge.com/rss/index.xml",        "en"),
 ]
 
 
