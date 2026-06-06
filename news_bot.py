@@ -156,7 +156,7 @@ Haberler:
 
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        model    = genai.GenerativeModel("gemini-1.5-flash")
+        model    = genai.GenerativeModel("gemini-2.0-flash")
         response = model.generate_content(prompt)
         text     = response.text.strip().replace("```json", "").replace("```", "").strip()
         return json.loads(text)
