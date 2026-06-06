@@ -1,7 +1,7 @@
 """
 News bot: pulls RSS feeds (finans + teknoloji),
-çevirir, tekilleştirir, Gemini ile hisse analizi ekler,
-Telegram'a gönderir. Her 15 dakikada GitHub Actions ile çalışır.
+cevirir, tekillestirir, Gemini ile hisse analizi ekler,
+Telegram'a gonderir. Her 15 dakikada GitHub Actions ile calisir.
 """
 import os
 import sys
@@ -28,22 +28,27 @@ MAX_SEEN      = 2000
 MAX_PER_FEED  = 25
 SLEEP_BETWEEN = 1.2
 
+GEMINI_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "gemini-2.0-flash:generateContent?key={key}"
+)
+
 # ---------- Feeds (finans + teknoloji) ----------
 FEEDS = [
-    # 💰 BIST / Türkiye Ekonomi
+    # BIST / Turkiye Ekonomi
     ("💰", "BIST",      "Bloomberg HT",  "https://www.bloomberght.com/rss",                 "tr"),
-    ("💰", "BIST",      "Dünya Gzt.",    "https://www.dunya.com/rss?dunya",                 "tr"),
-    ("💰", "BIST",      "Hürriyet Eko",  "https://www.hurriyet.com.tr/rss/ekonomi",         "tr"),
-    ("💰", "BIST",      "Sözcü Eko",     "https://www.sozcu.com.tr/category/ekonomi/feed/", "tr"),
-    # 📈 ABD / Global Piyasalar
+    ("💰", "BIST",      "Dunya Gzt.",    "https://www.dunya.com/rss?dunya",                 "tr"),
+    ("💰", "BIST",      "Hurriyet Eko",  "https://www.hurriyet.com.tr/rss/ekonomi",         "tr"),
+    ("💰", "BIST",      "Sozcu Eko",     "https://www.sozcu.com.tr/category/ekonomi/feed/", "tr"),
+    # ABD / Global Piyasalar
     ("📈", "Piyasalar", "CNBC",          "https://www.cnbc.com/id/100003114/device/rss/rss.html",      "en"),
     ("📈", "Piyasalar", "CNBC Markets",  "https://www.cnbc.com/id/15839069/device/rss/rss.html",       "en"),
     ("📈", "Piyasalar", "Yahoo Finance", "https://finance.yahoo.com/news/rssindex",                    "en"),
     ("📈", "Piyasalar", "MarketWatch",   "https://feeds.content.dowjones.io/public/rss/mw_topstories", "en"),
     ("📈", "Piyasalar", "WSJ Markets",   "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",              "en"),
-    # 🏦 Makro / Merkez Bankaları
+    # Makro / Merkez Bankalari
     ("🏦", "Makro",     "Fed",           "https://www.federalreserve.gov/feeds/press_all.xml", "en"),
-    # 💻 Teknoloji
+    # Teknoloji
     ("💻", "Teknoloji", "Webrazzi",      "https://webrazzi.com/feed/",                       "tr"),
     ("💻", "Teknoloji", "TechCrunch",    "https://techcrunch.com/feed/",                     "en"),
     ("💻", "Teknoloji", "The Verge",     "https://www.theverge.com/rss/index.xml",           "en"),
@@ -97,24 +102,18 @@ def send_telegram(text: str) -> bool:
     }
     for attempt in range(3):
         try:
-            resp = requests.post(
-                url,
-                json={"contents": [{"parts": [{"text": prompt}]}]},
-                timeout=30,
-            )
-            if resp.status_code == 429:
-                wait = 10 * (attempt + 1)
-                print(f"Rate limit, {wait}s bekleniyor...")
-                time.sleep(wait)
+            r = requests.post(url, json=payload, timeout=15)
+            if r.status_code == 429:
+                retry = r.json().get("parameters", {}).get("retry_after", 5)
+                print(f"  Telegram rate limit, {retry}s bekleniyor...")
+                time.sleep(retry + 1)
                 continue
-            resp.raise_for_status()
-            text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-            text = text.strip().replace("```json", "").replace("```", "").strip()
-            return json.loads(text)
+            r.raise_for_status()
+            return True
         except Exception as e:
-            print(f"Gemini analizi başarısız (deneme {attempt+1}): {e}", file=sys.stderr)
-            time.sleep(5)
-    return {}
+            print(f"  telegram send failed (try {attempt+1}): {e}", file=sys.stderr)
+            time.sleep(2)
+    return False
 
 def format_msg(emoji, category, source, title_tr, link, original_title, lang, stocks=None):
     title_tr = html_escape(title_tr.strip())
@@ -134,42 +133,48 @@ def format_msg(emoji, category, source, title_tr, link, original_title, lang, st
 
 # ---------- Gemini Hisse Analizi ----------
 def get_stock_impacts(items: list) -> dict:
+    """Tum haberleri tek Gemini cagrisiyla analiz eder. {"0": [...], "1": [...]}"""
     if not GEMINI_API_KEY or not items:
         return {}
 
     headlines = "\n".join(f"{i}: {item['title']}" for i, item in enumerate(items))
-    prompt = f"""Aşağıdaki haber başlıklarının her biri için BIST veya ABD borsasında \
-doğrudan etkilenebilecek hisse senetlerini belirt.
-Sadece JSON döndür, başka hiçbir şey yazma.
-Format: {{"0": ["TICKER1", "TICKER2"], "1": [], "2": ["TICKER3"]}}
-- Maksimum 3 ticker per haber. Eğer ilgili hisse yoksa boş liste.
-- BIST: Türkçe kodlar (GARAN, YKBNK, THYAO vb.), ABD: standart kodlar (AAPL, NVDA vb.)
-- Makro haberler için bankacılık önder hisseleri, teknoloji için ilgili tech hisseleri öner.
-
-Haberler:
-{headlines}"""
-
-    url = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+    prompt = (
+        "Asagidaki haber basliklarinin her biri icin BIST veya ABD borsasinda "
+        "dogrudan etkilenebilecek hisse senetlerini belirt.\n"
+        "Sadece JSON dondur, baska hicbir sey yazma.\n"
+        'Format: {"0": ["TICKER1", "TICKER2"], "1": [], "2": ["TICKER3"]}\n'
+        "- Maksimum 3 ticker per haber. Ilgili hisse yoksa bos liste.\n"
+        "- BIST: Turkce kodlar (GARAN, YKBNK, THYAO vb.), ABD: standart kodlar (AAPL, NVDA vb.)\n"
+        "- Makro haberler icin bankacilik onder hisseleri, teknoloji icin tech hisseleri oner.\n\n"
+        f"Haberler:\n{headlines}"
     )
-    try:
-        resp = requests.post(
-            url,
-            json={"contents": [{"parts": [{"text": prompt}]}]},
-            timeout=30,
-        )
-        resp.raise_for_status()
-        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-        text = text.strip().replace("```json", "").replace("```", "").strip()
-        return json.loads(text)
-    except Exception as e:
-        print(f"Gemini analizi başarısız: {e}", file=sys.stderr)
-        return {}
 
-# ---------- Feed işleme ----------
+    url = GEMINI_URL.format(key=GEMINI_API_KEY)
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+
+    for attempt in range(3):
+        try:
+            resp = requests.post(url, json=payload, timeout=30)
+            if resp.status_code == 429:
+                wait = 15 * (attempt + 1)
+                print(f"  Gemini rate limit (deneme {attempt+1}), {wait}s bekleniyor...")
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+            text = text.strip().replace("```json", "").replace("```", "").strip()
+            result = json.loads(text)
+            print(f"  Gemini basarili: {len(result)} haber etiketlendi.")
+            return result
+        except Exception as e:
+            print(f"  Gemini hatasi (deneme {attempt+1}): {e}", file=sys.stderr)
+            time.sleep(5)
+
+    return {}
+
+
+# ---------- Feed isleme ----------
 def collect_new_items(emoji, category, source, url, lang, state, first_run) -> list:
-    """Yeni haberleri toplar ama göndermez. first_run'da sadece işaretler."""
     try:
         feed = feedparser.parse(url, request_headers={"User-Agent": "Mozilla/5.0 NewsBot"})
     except Exception as e:
@@ -207,8 +212,9 @@ def collect_new_items(emoji, category, source, url, lang, state, first_run) -> l
         print(f"[{source}] first run: marked {len(new_items)} as seen")
         return []
 
-    print(f"[{source}] {len(new_items)} yeni haber")
-    return list(reversed(new_items))  # eskiden yeniye
+    if new_items:
+        print(f"[{source}] {len(new_items)} yeni haber")
+    return list(reversed(new_items))
 
 
 def send_all_items(all_items: list, stock_impacts: dict, state: dict) -> int:
@@ -234,10 +240,8 @@ def main():
     state     = load_state()
     first_run = not state["hashes"] and not state["title_hashes"]
     if first_run:
-        print("⚠ First run — marking current items as seen without sending.")
-        print("  Next run (~15 min) will send only new items.\n")
+        print("First run — marking current items as seen without sending.")
 
-    # 1. Tüm feedlerden yeni haberleri topla
     all_items = []
     for emoji, category, source, url, lang in FEEDS:
         items = collect_new_items(emoji, category, source, url, lang, state, first_run)
@@ -250,15 +254,12 @@ def main():
         print("Yeni haber yok.")
         return
 
-    # 2. Tek Gemini çağrısıyla tüm haberler için hisse analizi
-    print("Gemini hisse analizi yapılıyor...")
+    print("Gemini hisse analizi yapiliyor...")
     stock_impacts = get_stock_impacts(all_items)
-    print(f"Analiz tamamlandı: {len(stock_impacts)} haber etiketlendi.")
 
-    # 3. Telegram'a gönder
     sent = send_all_items(all_items, stock_impacts, state)
     save_state(state)
-    print(f"\nDone. Gönderilen: {sent}. Takip edilen: {len(state['hashes'])} item.")
+    print(f"Done. Gonderilen: {sent}. Takip edilen: {len(state['hashes'])} item.")
 
 
 if __name__ == "__main__":
