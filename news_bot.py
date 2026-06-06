@@ -97,18 +97,24 @@ def send_telegram(text: str) -> bool:
     }
     for attempt in range(3):
         try:
-            r = requests.post(url, json=payload, timeout=15)
-            if r.status_code == 429:
-                retry = r.json().get("parameters", {}).get("retry_after", 5)
-                print(f"  rate limited, sleeping {retry}s")
-                time.sleep(retry + 1)
+            resp = requests.post(
+                url,
+                json={"contents": [{"parts": [{"text": prompt}]}]},
+                timeout=30,
+            )
+            if resp.status_code == 429:
+                wait = 10 * (attempt + 1)
+                print(f"Rate limit, {wait}s bekleniyor...")
+                time.sleep(wait)
                 continue
-            r.raise_for_status()
-            return True
+            resp.raise_for_status()
+            text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+            text = text.strip().replace("```json", "").replace("```", "").strip()
+            return json.loads(text)
         except Exception as e:
-            print(f"  telegram send failed (try {attempt+1}): {e}", file=sys.stderr)
-            time.sleep(2)
-    return False
+            print(f"Gemini analizi başarısız (deneme {attempt+1}): {e}", file=sys.stderr)
+            time.sleep(5)
+    return {}
 
 def format_msg(emoji, category, source, title_tr, link, original_title, lang, stocks=None):
     title_tr = html_escape(title_tr.strip())
