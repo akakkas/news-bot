@@ -17,7 +17,6 @@ from pathlib import Path
 import feedparser
 import requests
 from deep_translator import GoogleTranslator
-import google.generativeai as genai
 
 # ---------- Config ----------
 TELEGRAM_TOKEN   = os.environ["TELEGRAM_BOT_TOKEN"]
@@ -129,41 +128,38 @@ def format_msg(emoji, category, source, title_tr, link, original_title, lang, st
 
 # ---------- Gemini Hisse Analizi ----------
 def get_stock_impacts(items: list) -> dict:
-    """
-    Tüm yeni haberleri tek Gemini çağrısıyla analiz eder.
-    Döndürür: {"0": ["GARAN", "YKBNK"], "1": ["AAPL"], ...}
-    """
     if not GEMINI_API_KEY or not items:
         return {}
 
     headlines = "\n".join(f"{i}: {item['title']}" for i, item in enumerate(items))
-
-    prompt = f"""Aşağıdaki haber başlıklarının her biri için BIST (Borsa İstanbul) veya ABD \
-borsasında doğrudan etkilenebilecek hisse senetlerini belirt.
-
-Kurallar:
-- Sadece JSON döndür, başka hiçbir şey yazma.
-- Format: {{"0": ["TICKER1", "TICKER2"], "1": [], "2": ["TICKER3"]}}
-- Eğer ilgili hisse yoksa boş liste döndür.
-- Maksimum 3 ticker per haber.
-- BIST hisseleri: Türkçe kodlar (GARAN, YKBNK, THYAO, ASELS, KCHOL vb.)
-- ABD hisseleri: standart kodlar (AAPL, NVDA, JPM vb.)
-- Genel makro haberler (Fed, faiz, enflasyon) için bankacılık sektörü önder hisseleri öner.
-- Teknoloji haberleri için ilgili tech hisseleri öner.
+    prompt = f"""Aşağıdaki haber başlıklarının her biri için BIST veya ABD borsasında \
+doğrudan etkilenebilecek hisse senetlerini belirt.
+Sadece JSON döndür, başka hiçbir şey yazma.
+Format: {{"0": ["TICKER1", "TICKER2"], "1": [], "2": ["TICKER3"]}}
+- Maksimum 3 ticker per haber. Eğer ilgili hisse yoksa boş liste.
+- BIST: Türkçe kodlar (GARAN, YKBNK, THYAO vb.), ABD: standart kodlar (AAPL, NVDA vb.)
+- Makro haberler için bankacılık önder hisseleri, teknoloji için ilgili tech hisseleri öner.
 
 Haberler:
 {headlines}"""
 
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+    )
     try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model    = genai.GenerativeModel("gemini-2.0-flash")
-        response = model.generate_content(prompt)
-        text     = response.text.strip().replace("```json", "").replace("```", "").strip()
+        resp = requests.post(
+            url,
+            json={"contents": [{"parts": [{"text": prompt}]}]},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+        text = text.strip().replace("```json", "").replace("```", "").strip()
         return json.loads(text)
     except Exception as e:
         print(f"Gemini analizi başarısız: {e}", file=sys.stderr)
         return {}
-
 
 # ---------- Feed işleme ----------
 def collect_new_items(emoji, category, source, url, lang, state, first_run) -> list:
