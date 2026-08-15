@@ -1,8 +1,5 @@
 {
   "hashes": [
-    "5551ab80e2f8d8a6",
-    "bfb11d2d1f154331",
-    "0a3981df6f07688b",
     "35066cc44eb363a9",
     "4660a7b982e71e8f",
     "05f44ed9748c92f0",
@@ -1999,12 +1996,12 @@
     "96d1cbcb925caf19",
     "28499dd612ca42f8",
     "e0caba32e564ba82",
-    "1459038cfde98322"
+    "1459038cfde98322",
+    "5e8954a9a33ad73c",
+    "845c36cccfa4ac90",
+    "52465682f4374a5d"
   ],
   "title_hashes": [
-    "b88fc0f013fe39b9",
-    "6dd1373ea73e003f",
-    "f703406af2b41d1a",
     "5646bad8b2cab57e",
     "f58c7d5ca15906f4",
     "d57a7a77c6e78cf4",
@@ -4001,6 +3998,9 @@
     "0e10dd375b6bdb49",
     "ab853e5ced729d1b",
     "c0a0f4c733076490",
-    "1c19bc9cef52e3a8"
+    "1c19bc9cef52e3a8",
+    "ad5dd47f829bd5af",
+    "0e655c15324eee73",
+    "727cf933f86195e4"
   ]
 }
